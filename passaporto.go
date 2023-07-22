@@ -61,7 +61,7 @@ func pollAPI(bot *tgbotapi.BotAPI) {
 			fmt.Println(err)
 			return
 		}
-		req.Header.Add("Cookie", "AGPID=Ae14AJoLxwob7dw5PuiSXQ$$; JSESSIONID=clKrpYtuvJiQQE4yYTjdvi5W; AGPID_FE=AlpwaigKxwoPe09SDYMZDQ$$; AGPID=AJxnQJoLxwpr0cwl9gxeAA$$; AGPID_FE=Ak4jSigKxwrrsHUnIWmLew$$; JSESSIONID=clKrpYtuvJiQQE4yYTjdvi5W"
+		req.Header.Add("Cookie", "AGPID=Ae14AJoLxwob7dw5PuiSXQ$$; JSESSIONID=clKrpYtuvJiQQE4yYTjdvi5W; AGPID_FE=AlpwaigKxwoPe09SDYMZDQ$$; AGPID=AJxnQJoLxwpr0cwl9gxeAA$$; AGPID_FE=Ak4jSigKxwrrsHUnIWmLew$$; JSESSIONID=clKrpYtuvJiQQE4yYTjdvi5W")
 		res, err := client.Do(req)
 		if err != nil {
 			fmt.Println(err)
