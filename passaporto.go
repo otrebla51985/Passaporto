@@ -44,7 +44,11 @@ func main() {
 }
 
 func startHTTPServer() {
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 func pollAPI(bot *tgbotapi.BotAPI) {
@@ -95,7 +99,7 @@ func pollAPI(bot *tgbotapi.BotAPI) {
 func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Println("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
-	chatID := int64(112845421) //YOUR_TELEGRAM_CHAT_ID
+	chatID := int64(-974313836) //YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
 	//gruppo = -974313836
 
