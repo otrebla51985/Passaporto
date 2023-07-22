@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	url         = "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD"
-	method      = "GET"
-	pollingTime = 30 * time.Second
+	pollingTime     = 30 * time.Second
+	triggerEndpoint = "/trigger"
 )
 
 var bodyString = ""
+var pollAPIFlag = false
 
 func main() {
 	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
@@ -28,9 +28,30 @@ func main() {
 
 	log.Printf("Connected to Telegram bot: %s", bot.Self.UserName)
 
+	// Start the HTTP server to handle API requests
+	http.HandleFunc(triggerEndpoint, func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Received trigger API request")
+		pollAPIFlag = true
+		go handleTriggerRequest(bot)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("API trigger received"))
+	})
+
+	go startHTTPServer()
+
+	// Block the main goroutine to keep the server running indefinitely
+	select {}
+}
+
+func startHTTPServer() {
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func pollAPI(bot *tgbotapi.BotAPI) {
 	for {
+
 		client := &http.Client{}
-		req, err := http.NewRequest(method, url, nil)
+		req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
 
 		if err != nil {
 			fmt.Println(err)
@@ -63,7 +84,8 @@ func main() {
 
 		if response == "YES" {
 			sendTelegramNotification(bot, bodyString)
-			return
+			pollAPIFlag = false
+			break // Exit the loop when "YES" response is received
 		}
 
 		time.Sleep(pollingTime)
@@ -73,7 +95,7 @@ func main() {
 func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Println("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
-	chatID := int64(-974313836) //YOUR_TELEGRAM_CHAT_ID
+	chatID := int64(112845421) //YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
 	//gruppo = -974313836
 
@@ -144,4 +166,10 @@ func getCharactersAfterSubstring(inputString, substring string) string {
 
 	// Extract the characters after the substring up to the 10th character.
 	return inputString[index+len(substring) : endPosition]
+}
+
+func handleTriggerRequest(bot *tgbotapi.BotAPI) {
+	log.Println("Received trigger request - polling API and sending Telegram notification")
+	pollAPIFlag = true
+	go pollAPI(bot) // Start the API polling in a separate goroutine
 }
