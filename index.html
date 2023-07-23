@@ -67,7 +67,7 @@
             logLines.shift(); // Remove the first element (oldest log line) from the array
           }
           // Set the innerHTML of the log container to display the last 10 log lines
-          logContainer.innerHTML = logLines.join(" < br > ");
+          logContainer.innerHTML = logLines.join(" <br> ");
         };
         socket.onclose = function(event) {
           // Reconnect after 3 seconds when the WebSocket connection is closed

@@ -190,12 +190,12 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 			response := ""
 			if strings.Contains(bodyString, "\"disponibilita\">No</td>") || strings.Contains(bodyString, "Accesso Negato") {
 				response = "NO"
-				logToWebSocket("Ancora niente")
+				logToWebSocket("Nessun posto libero")
 			} else {
 				result := getCharactersAfterSubstring(bodyString, "data=")
 				if !strings.Contains(result, "-") {
 					response = "NO"
-					logToWebSocket("Ancora niente")
+					logToWebSocket("Nessun posto libero")
 				} else {
 					fmt.Println("Forse ho trovato")
 					fmt.Println(bodyString)
