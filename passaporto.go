@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,11 +15,13 @@ import (
 
 const (
 	pollingTime     = 30 * time.Second
-	triggerEndpoint = "/trigger"
+	triggerEndpoint = "/trigger/"
 )
 
 var bodyString = ""
 var pollAPIFlag = false
+var cookies string
+var errorMsg string
 
 func main() {
 	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
@@ -28,30 +31,104 @@ func main() {
 
 	log.Printf("Connected to Telegram bot: %s", bot.Self.UserName)
 
-	// Start the HTTP server to handle API requests
-	http.HandleFunc(triggerEndpoint, func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Received trigger API request")
-		pollAPIFlag = true
-		go handleTriggerRequest(bot)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("API trigger received"))
-	})
+	// Start the HTTP server to handle API requests and HTML page
+	http.HandleFunc("/", handleIndexPage)
+	http.HandleFunc(triggerEndpoint, handleTriggerRequest)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
-	go startHTTPServer()
+	go func() {
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Block the main goroutine to keep the server running indefinitely
+	// and recover from any panics that may occur
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Panic occurred:", r)
+			log.Println("Server is restarting...")
+		}
+	}()
 
 	// Block the main goroutine to keep the server running indefinitely
 	select {}
 }
 
-func startHTTPServer() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+func handleIndexPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		r.ParseForm()
+		cookies = r.Form.Get("cookies")
+
+		// Remove spaces from the cookies string
+		cookies = strings.ReplaceAll(cookies, " ", "")
+
+		// Reset the errorMsg when new cookies are submitted
+		errorMsg = ""
+
+		http.Redirect(w, r, triggerEndpoint, http.StatusSeeOther)
+		return
 	}
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+
+	tmpl := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Trigger API</title>
+	</head>
+	<body>
+		<h2>Enter Cookies:</h2>
+		<form method="post">
+			<input type="text" name="cookies" placeholder="Enter cookies here">
+			<input type="submit" value="Submit">
+		</form>
+	</body>
+	</html>
+	`
+
+	t := template.Must(template.New("index").Parse(tmpl))
+	t.Execute(w, nil)
 }
 
-func pollAPI(bot *tgbotapi.BotAPI) {
+func checkAPI() bool {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	// Use the stored cookies in the request header
+	req.Header.Add("Cookie", cookies)
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	bodyString = string(body)
+
+	// Check if the "Accesso Negato" substring is present in the XML response
+	return !strings.Contains(bodyString, "Accesso Negato")
+}
+
+func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI) {
+	if !checkAPI() {
+		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
+		return
+	}
+
 	for {
 
 		client := &http.Client{}
@@ -61,7 +138,7 @@ func pollAPI(bot *tgbotapi.BotAPI) {
 			fmt.Println(err)
 			return
 		}
-		req.Header.Add("Cookie", "AGPID_FE=AnpzACgKxwo1yV9LspWmAA$$; AGPID=AGV+ZJoLxwouL55lVtAdPQ$$; JSESSIONID=3xXhuY1PnNcge2MxXffoLP+0; JSESSIONID=3xXhuY1PnNcge2MxXffoLP+0")
+		req.Header.Add("Cookie", cookies)
 		res, err := client.Do(req)
 		if err != nil {
 			fmt.Println(err)
@@ -77,7 +154,7 @@ func pollAPI(bot *tgbotapi.BotAPI) {
 		bodyString = string(body)
 
 		response := ""
-		if strings.Contains(bodyString, "\"disponibilita\">No</td>") {
+		if strings.Contains(bodyString, "\"disponibilita\">No</td>") || strings.Contains(bodyString, "Accesso Negato") {
 			response = "NO"
 			log.Println("Ancora niente")
 		} else {
@@ -96,8 +173,23 @@ func pollAPI(bot *tgbotapi.BotAPI) {
 	}
 }
 
+func sendErrorResponse(w http.ResponseWriter, message string) {
+	// Send an error message back to the frontend
+	errorMsg = message
+	http.Error(w, message, http.StatusBadRequest)
+}
+
 func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Println("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Panic occurred in sendTelegramNotification:", r)
+		}
+	}()
+
+	log.Printf("Bot username: %s", bot.Self.UserName)
+	log.Printf("Bot ID: %d", bot.Self.ID)
 
 	chatID := int64(-974313836) //YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
@@ -172,8 +264,25 @@ func getCharactersAfterSubstring(inputString, substring string) string {
 	return inputString[index+len(substring) : endPosition]
 }
 
-func handleTriggerRequest(bot *tgbotapi.BotAPI) {
+func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received trigger request - polling API and sending Telegram notification")
+
+	if !checkAPI() {
+		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
+		return
+	}
+
+	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
+	if err != nil {
+		log.Println("Error initializing Telegram bot:", err)
+		sendErrorResponse(w, "Error initializing Telegram bot: "+err.Error())
+		return
+	}
+
 	pollAPIFlag = true
-	go pollAPI(bot) // Start the API polling in a separate goroutine
+	go pollAPI(w, bot) // Start the API polling in a separate goroutine
+
+	// Respond to the trigger request with a success message
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("API trigger received. Polling has started with the provided cookies."))
 }
