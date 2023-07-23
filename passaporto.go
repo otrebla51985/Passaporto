@@ -23,10 +23,8 @@ const (
 
 var bodyString = ""
 var pollAPIFlag = false
-var cookies string
 var errorMsg string
 
-var logChannel = make(chan string)
 var clients = make(map[*websocket.Conn]bool)
 
 var upgrader = websocket.Upgrader{
