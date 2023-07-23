@@ -46,6 +46,8 @@ func main() {
 		}
 	}()
 
+	go keepAlive()
+
 	// Block the main goroutine to keep the server running indefinitely
 	// and recover from any panics that may occur
 	defer func() {
