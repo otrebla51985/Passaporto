@@ -281,7 +281,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 
 	// Create the Telegram document
 	msg := tgbotapi.NewDocumentUpload(chatID, fileBytes)
-	msg.Caption = "C'è posto" + "    \n\ndata = " + result
+	msg.Caption = "Trovato un posto" + "    \n\ndata = " + result
 	_, err = bot.Send(msg)
 	if err != nil {
 		log.Println("Error sending Telegram document:", err)
