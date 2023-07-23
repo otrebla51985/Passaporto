@@ -62,6 +62,10 @@ func main() {
 }
 
 func handleIndexPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
 	// Serve the index.html file when the root endpoint is accessed
 	http.ServeFile(w, r, "index.html")
 }
