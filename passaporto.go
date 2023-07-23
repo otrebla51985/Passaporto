@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -24,6 +26,57 @@ var pollAPIFlag = false
 var cookies string
 var errorMsg string
 
+var logChannel = make(chan string)
+var clients = make(map[*websocket.Conn]bool)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		// Allow all connections from any origin. You may want to restrict this for production use.
+		return true
+	},
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("WebSocket upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	// Add the client to the clients map
+	clients[conn] = true
+	defer delete(clients, conn)
+
+	for {
+		// Keep the WebSocket connection open to receive log messages
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("WebSocket read error:", err)
+			return
+		}
+	}
+}
+
+func logToWebSocket(message string) {
+	// Send the log message to all connected WebSocket clients
+	currentTime := time.Now()
+
+	// Format the date and time to a desired layout
+	dateTimeLayout := "02-01-2006 15:04:05"
+	formattedDateTime := currentTime.Format(dateTimeLayout)
+	message = formattedDateTime + " - " + message
+
+	for client := range clients {
+		err := client.WriteMessage(websocket.TextMessage, []byte(message))
+		if err != nil {
+			log.Println("WebSocket write error:", err)
+			client.Close()
+			delete(clients, client)
+		}
+	}
+}
+
 func main() {
 	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
 	if err != nil {
@@ -35,6 +88,8 @@ func main() {
 	// Start the HTTP server to handle API requests and HTML page
 	http.HandleFunc("/", handleIndexPage)
 	http.HandleFunc(triggerEndpoint, handleTriggerRequest)
+	http.HandleFunc("/ws", handleWebSocket) // WebSocket endpoint
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -133,11 +188,17 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 		response := ""
 		if strings.Contains(bodyString, "\"disponibilita\">No</td>") || strings.Contains(bodyString, "Accesso Negato") {
 			response = "NO"
-			log.Println("Ancora niente")
+			logToWebSocket("Ancora niente")
 		} else {
-			fmt.Println("Forse ho trovato")
-			fmt.Println(bodyString)
-			response = "YES"
+			result := getCharactersAfterSubstring(bodyString, "data=")
+			if !strings.Contains(result, "-") {
+				response = "NO"
+				logToWebSocket("Ancora niente")
+			} else {
+				fmt.Println("Forse ho trovato")
+				fmt.Println(bodyString)
+				response = "YES"
+			}
 		}
 
 		if response == "YES" {
@@ -157,7 +218,7 @@ func sendErrorResponse(w http.ResponseWriter, message string) {
 }
 
 func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
-	log.Println("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
+	logToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -292,7 +353,7 @@ func keepAlive() {
 			log.Println("Error calling Render instance:", err)
 		} else {
 			defer res.Body.Close()
-			log.Println("API call to Render instance successful")
+			logToWebSocket("API call to Render instance successful")
 		}
 
 		time.Sleep(pollingTime)

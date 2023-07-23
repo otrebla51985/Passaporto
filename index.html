@@ -1,49 +1,84 @@
 <!-- index.html -->
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Passaporto Polling</title>
-</head>
-<body>
+  </head>
+  <body>
     <h2>Enter Cookies</h2>
     <div>
-        <label for="agpid_fe">AGPID_FE:</label>
-        <input type="text" id="agpid_fe" name="agpid_fe"><br>
-        <br/>
-        <label for="agpid">AGPID:</label>
-        <input type="text" id="agpid" name="agpid"><br>
-        <br/>
-        <label for="jsessionid">JSESSIONID:</label>
-        <input type="text" id="jsessionid" name="jsessionid"><br>
-        <br/>
-        <input type="button" value="Submit" id="submitButton">
+      <label for="agpid_fe">AGPID_FE:</label>
+      <input type="text" id="agpid_fe" name="agpid_fe">
+      <br>
+      <br />
+      <label for="agpid">AGPID:</label>
+      <input type="text" id="agpid" name="agpid">
+      <br>
+      <br />
+      <label for="jsessionid">JSESSIONID:</label>
+      <input type="text" id="jsessionid" name="jsessionid">
+      <br>
+      <br />
+      <input type="button" value="Submit" id="submitButton">
     </div>
-    
     <p id="response"></p>
-
     <script>
-        document.getElementById("submitButton").addEventListener("click", function() {
-            var agpid_fe = encodeURIComponent(document.getElementById("agpid_fe").value);
-            var agpid = encodeURIComponent(document.getElementById("agpid").value);
-            var jsessionid = encodeURIComponent(document.getElementById("jsessionid").value);
-
-            // Combine the values into one string
-            var cookies = "AGPID_FE=" + agpid_fe + "&AGPID=" + agpid + "&JSESSIONID=" + jsessionid;
-
-            // Send a POST request to the trigger endpoint with the combined cookies
-            fetch('/trigger?' + cookies)
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById("response").innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+      document.getElementById("submitButton").addEventListener("click", function() {
+        var agpid_fe = encodeURIComponent(document.getElementById("agpid_fe").value);
+        var agpid = encodeURIComponent(document.getElementById("agpid").value);
+        var jsessionid = encodeURIComponent(document.getElementById("jsessionid").value);
+        // Combine the values into one string
+        var cookies = "AGPID_FE=" + agpid_fe + "&AGPID=" + agpid + "&JSESSIONID=" + jsessionid;
+        // Send a POST request to the trigger endpoint with the combined cookies
+        fetch('/trigger?' + cookies).then(response => response.text()).then(data => {
+          document.getElementById("response").innerHTML = data;
+        }).catch(error => {
+          console.error('Error:', error);
         });
+      });
     </script>
-    <hr/>
+    <hr />
     <p>Puoi recuperare questi cookies accedendo al sito del passaporto col tuo spid e poi cliccando tasto destro --> "Ispeziona". Viene aperto un riquadro come quello qui sotto, i cookies richeisti si trovano nella tab "Application".</p>
-    <br/>
+    <br />
     <img src="https://raw.githubusercontent.com/GaussGreen1/Passaporto/main/cookies.jpg" alt="img">
-</body>
+    <br />
+    <br />
+    <hr />
+    <hr />
+    <h2>Backend Logs:</h2>
+    <div id="log-container"></div>
+    <script>
+      // Initialize an array to store the log messages
+      var logs = [];
+      // Function to connect to the WebSocket endpoint and display log messages
+      function connectWebSocket() {
+        var socket = new WebSocket("ws://" + window.location.host + "/ws");
+        socket.onmessage = function(event) {
+          // Add the log message to the array
+          logs.push(event.data);
+          // Keep only the last 10 log messages in the array
+          if (logs.length > 10) {
+            logs.shift(); // Remove the oldest log message
+          }
+          // Update the log container with the latest log messages
+          var logContainer = document.getElementById("log-container");
+          logContainer.innerHTML = ""; // Clear the existing log messages
+          // Create and append a text node for each log message
+          logs.forEach(function(log) {
+            var logNode = document.createTextNode(log);
+            logContainer.appendChild(logNode);
+            logContainer.appendChild(document.createElement("br")); // Add a line break
+          });
+        };
+        socket.onclose = function(event) {
+          // Reconnect after 3 seconds when the WebSocket connection is closed
+          setTimeout(connectWebSocket, 3000);
+        };
+      }
+      // Call the connectWebSocket function when the page loads
+      window.onload = function() {
+        connectWebSocket();
+      };
+    </script>
+  </body>
 </html>
