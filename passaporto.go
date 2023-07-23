@@ -164,49 +164,49 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 	}
 
 	for {
+		if pollAPIFlag {
+			client := &http.Client{}
+			req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
 
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			req.Header.Add("Cookie", cookies)
+			res, err := client.Do(req)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			defer res.Body.Close()
 
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		req.Header.Add("Cookie", cookies)
-		res, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer res.Body.Close()
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			bodyString = string(body)
 
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		bodyString = string(body)
-
-		response := ""
-		if strings.Contains(bodyString, "\"disponibilita\">No</td>") || strings.Contains(bodyString, "Accesso Negato") {
-			response = "NO"
-			logToWebSocket("Ancora niente")
-		} else {
-			result := getCharactersAfterSubstring(bodyString, "data=")
-			if !strings.Contains(result, "-") {
+			response := ""
+			if strings.Contains(bodyString, "\"disponibilita\">No</td>") || strings.Contains(bodyString, "Accesso Negato") {
 				response = "NO"
 				logToWebSocket("Ancora niente")
 			} else {
-				fmt.Println("Forse ho trovato")
-				fmt.Println(bodyString)
-				response = "YES"
+				result := getCharactersAfterSubstring(bodyString, "data=")
+				if !strings.Contains(result, "-") {
+					response = "NO"
+					logToWebSocket("Ancora niente")
+				} else {
+					fmt.Println("Forse ho trovato")
+					fmt.Println(bodyString)
+					response = "YES"
+				}
 			}
-		}
 
-		if response == "YES" {
-			sendTelegramNotification(bot, bodyString)
-			pollAPIFlag = false
-			break // Exit the loop when "YES" response is received
+			if response == "YES" {
+				sendTelegramNotification(bot, bodyString)
+				pollAPIFlag = false // Stop calling the API until the user presses the submit button again
+			}
 		}
 
 		time.Sleep(pollingTime)
@@ -355,7 +355,7 @@ func keepAlive() {
 			log.Println("Error calling Render instance:", err)
 		} else {
 			defer res.Body.Close()
-			logToWebSocket("API call to Render instance successful")
+			log.Println("API call to Render instance successful")
 		}
 
 		time.Sleep(pollingTime)
