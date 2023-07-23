@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -27,9 +26,7 @@
         var agpid_fe = encodeURIComponent(document.getElementById("agpid_fe").value);
         var agpid = encodeURIComponent(document.getElementById("agpid").value);
         var jsessionid = encodeURIComponent(document.getElementById("jsessionid").value);
-        // Combine the values into one string
         var cookies = "AGPID_FE=" + agpid_fe + "&AGPID=" + agpid + "&JSESSIONID=" + jsessionid;
-        // Send a POST request to the trigger endpoint with the combined cookies
         fetch('/trigger?' + cookies).then(response => response.text()).then(data => {
           document.getElementById("response").innerHTML = data;
         }).catch(error => {
@@ -52,7 +49,6 @@
     <br />
 	<div id="log-container"></div>
     <script>
-      // Function to connect to the WebSocket endpoint and display log messages
       function connectWebSocket() {
         var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
@@ -60,17 +56,14 @@
         var logLines = [];
         socket.onmessage = function(event) {
           var logContainer = document.getElementById("log-container");
-          // Add the log message to the array
           logLines.push(event.data);
           // Show only the last 10 log lines
           if (logLines.length > 10) {
-            logLines.shift(); // Remove the first element (oldest log line) from the array
+            logLines.shift(); 
           }
-          // Set the innerHTML of the log container to display the last 10 log lines
           logContainer.innerHTML = logLines.join(" <br> ");
         };
         socket.onclose = function(event) {
-          // Reconnect after 3 seconds when the WebSocket connection is closed
           setTimeout(connectWebSocket, 3000);
         };
       }

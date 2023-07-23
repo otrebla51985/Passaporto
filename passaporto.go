@@ -59,10 +59,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func logToWebSocket(message string) {
-	// Send the log message to all connected WebSocket clients
-	currentTime := time.Now()
+	italianTZ, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		log.Println("Error loading Italian timezone:", err)
+		return
+	}
 
-	// Format the date and time to a desired layout
+	currentTime := time.Now().In(italianTZ)
+
 	dateTimeLayout := "02-01-2006 15:04:05"
 	formattedDateTime := currentTime.Format(dateTimeLayout)
 	message = formattedDateTime + " - " + message
