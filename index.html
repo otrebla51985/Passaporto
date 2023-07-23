@@ -38,7 +38,8 @@
       });
     </script>
     <hr />
-    <p>Puoi recuperare questi cookies accedendo al sito del passaporto col tuo spid e poi cliccando tasto destro --> "Ispeziona". Viene aperto un riquadro come quello qui sotto, i cookies richeisti si trovano nella tab "Application".</p>
+    <p>Questa pagina serve per dare una svegliata al bot quando si ferma per cookies di SPID scaduti. Chiunque può usare il proprio SPID per compilare i tre campi sopra e riattivare il bot. </p>
+    <p>Puoi recuperare questi cookies accedendo al sito del passaporto col tuo SPID e poi cliccando tasto destro --> "Ispeziona". Viene aperto un riquadro come quello qui sotto, i cookies richeisti si trovano nella tab "Application".</p>
     <br />
     <img src="https://raw.githubusercontent.com/GaussGreen1/Passaporto/main/cookies.jpg" alt="img">
     <br />
@@ -46,38 +47,34 @@
     <hr />
     <hr />
     <h2>Backend Logs:</h2>
-    <div id="log-container"></div>
+	<p>Se il bot è attivo, sotto questa scritta verrà aggiornato il suo stato ogni 30 secondi. Se qui sotto non c'è scritto nulla o sembra tutto fermo allora va riattivato passandogli i cookies come sopra.</p> 
+    <br>
+    <br />
+	<div id="log-container"></div>
     <script>
-        // Function to connect to the WebSocket endpoint and display log messages
-        function connectWebSocket() {
-            var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
-
-            // Array to store the log lines
-            var logLines = [];
-
-            socket.onmessage = function(event) {
-                var logContainer = document.getElementById("log-container");
-
-                // Add the log message to the array
-                logLines.push(event.data);
-
-                // Show only the last 10 log lines
-                if (logLines.length > 10) {
-                    logLines.shift(); // Remove the first element (oldest log line) from the array
-                }
-
-                // Set the innerHTML of the log container to display the last 10 log lines
-                logContainer.innerHTML = logLines.join("<br>");
-            };
-
-            socket.onclose = function(event) {
-                // Reconnect after 3 seconds when the WebSocket connection is closed
-                setTimeout(connectWebSocket, 3000);
-            };
-        }
-
-        connectWebSocket();
+      // Function to connect to the WebSocket endpoint and display log messages
+      function connectWebSocket() {
+        var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
+        // Array to store the log lines
+        var logLines = [];
+        socket.onmessage = function(event) {
+          var logContainer = document.getElementById("log-container");
+          // Add the log message to the array
+          logLines.push(event.data);
+          // Show only the last 10 log lines
+          if (logLines.length > 10) {
+            logLines.shift(); // Remove the first element (oldest log line) from the array
+          }
+          // Set the innerHTML of the log container to display the last 10 log lines
+          logContainer.innerHTML = logLines.join(" < br > ");
+        };
+        socket.onclose = function(event) {
+          // Reconnect after 3 seconds when the WebSocket connection is closed
+          setTimeout(connectWebSocket, 3000);
+        };
+      }
+      connectWebSocket();
     </script>
   </body>
 </html>
