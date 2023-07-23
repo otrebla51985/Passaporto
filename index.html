@@ -48,27 +48,13 @@
     <h2>Backend Logs:</h2>
     <div id="log-container"></div>
     <script>
-      // Initialize an array to store the log messages
-      var logs = [];
       // Function to connect to the WebSocket endpoint and display log messages
       function connectWebSocket() {
-        var socket = new WebSocket("ws://" + window.location.host + "/ws");
+        var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
         socket.onmessage = function(event) {
-          // Add the log message to the array
-          logs.push(event.data);
-          // Keep only the last 10 log messages in the array
-          if (logs.length > 10) {
-            logs.shift(); // Remove the oldest log message
-          }
-          // Update the log container with the latest log messages
           var logContainer = document.getElementById("log-container");
-          logContainer.innerHTML = ""; // Clear the existing log messages
-          // Create and append a text node for each log message
-          logs.forEach(function(log) {
-            var logNode = document.createTextNode(log);
-            logContainer.appendChild(logNode);
-            logContainer.appendChild(document.createElement("br")); // Add a line break
-          });
+          logContainer.innerHTML += event.data + " < br > ";
         };
         socket.onclose = function(event) {
           // Reconnect after 3 seconds when the WebSocket connection is closed
