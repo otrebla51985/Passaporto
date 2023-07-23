@@ -14,7 +14,9 @@ import (
 
 const (
 	pollingTime     = 30 * time.Second
-	triggerEndpoint = "/trigger/"
+	triggerEndpoint = "/trigger"
+	renderEndpoint  = "https://passaporto.onrender.com/"
+	method          = "GET"
 )
 
 var bodyString = ""
@@ -266,4 +268,27 @@ func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	// Respond to the trigger request with a success message
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("API trigger received. Polling has started with the provided cookies."))
+}
+
+func keepAlive() {
+	for {
+		client := &http.Client{}
+		req, err := http.NewRequest(method, renderEndpoint, nil)
+		if err != nil {
+			log.Println("Error creating request to Render instance:", err)
+			time.Sleep(pollingTime) // Retry after the pollingTime
+			continue
+		}
+
+		// Make the API call to the Render instance
+		res, err := client.Do(req)
+		if err != nil {
+			log.Println("Error calling Render instance:", err)
+		} else {
+			defer res.Body.Close()
+			log.Println("API call to Render instance successful")
+		}
+
+		time.Sleep(pollingTime)
+	}
 }
