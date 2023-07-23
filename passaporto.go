@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -59,41 +58,11 @@ func main() {
 }
 
 func handleIndexPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		r.ParseForm()
-		cookies = r.Form.Get("cookies")
-
-		// Remove spaces from the cookies string
-		cookies = strings.ReplaceAll(cookies, " ", "")
-
-		// Reset the errorMsg when new cookies are submitted
-		errorMsg = ""
-
-		http.Redirect(w, r, triggerEndpoint, http.StatusSeeOther)
-		return
-	}
-
-	tmpl := `
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>Trigger API</title>
-	</head>
-	<body>
-		<h2>Enter Cookies:</h2>
-		<form method="post">
-			<input type="text" name="cookies" placeholder="Enter cookies here">
-			<input type="submit" value="Submit">
-		</form>
-	</body>
-	</html>
-	`
-
-	t := template.Must(template.New("index").Parse(tmpl))
-	t.Execute(w, nil)
+	// Serve the index.html file when the root endpoint is accessed
+	http.ServeFile(w, r, "index.html")
 }
 
-func checkAPI() bool {
+func checkAPI(cookies string) bool {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
 
@@ -123,8 +92,8 @@ func checkAPI() bool {
 	return !strings.Contains(bodyString, "Accesso Negato")
 }
 
-func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI) {
-	if !checkAPI() {
+func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
+	if !checkAPI(cookies) {
 		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
 		return
 	}
@@ -267,7 +236,19 @@ func getCharactersAfterSubstring(inputString, substring string) string {
 func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received trigger request - polling API and sending Telegram notification")
 
-	if !checkAPI() {
+	// Extract the combined cookies from the URL parameters
+	cookies :=
+		"AGPID_FE=" + r.URL.Query().Get("AGPID_FE") + "; " +
+			"AGPID=" + r.URL.Query().Get("AGPID") + "; " +
+			"JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
+
+	cookies = strings.ReplaceAll(cookies, "%3B", ";")
+	cookies = strings.ReplaceAll(cookies, "%26", "&")
+	cookies = strings.ReplaceAll(cookies, " ", "")
+
+	log.Println("cookies = " + cookies)
+
+	if !checkAPI(cookies) {
 		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
 		return
 	}
@@ -275,12 +256,12 @@ func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
 	if err != nil {
 		log.Println("Error initializing Telegram bot:", err)
-		sendErrorResponse(w, "Error initializing Telegram bot: "+err.Error())
+		sendErrorResponse(w, "Error initializing Telegram bot. Please check the provided API token.")
 		return
 	}
 
 	pollAPIFlag = true
-	go pollAPI(w, bot) // Start the API polling in a separate goroutine
+	go pollAPI(w, bot, cookies) // Start the API polling in a separate goroutine
 
 	// Respond to the trigger request with a success message
 	w.WriteHeader(http.StatusOK)
