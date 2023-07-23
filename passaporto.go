@@ -208,6 +208,13 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 			if response == "YES" {
 				sendTelegramNotification(bot, bodyString)
 				pollAPIFlag = false // Stop calling the API until the user presses the submit button again
+
+				// Wait for 25 minutes before resuming the API polling
+				waitTime := 25 * time.Minute
+				time.Sleep(waitTime)
+
+				// Set pollAPIFlag to true after the wait time to resume API polling
+				pollAPIFlag = true
 			}
 		}
 
@@ -284,7 +291,6 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	if err != nil {
 		log.Println("Error sending Telegram document:", err)
 	}
-	os.Exit(3)
 }
 
 func getCharactersAfterSubstring(inputString, substring string) string {
