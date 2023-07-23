@@ -67,6 +67,8 @@ func logToWebSocket(message string) {
 	formattedDateTime := currentTime.Format(dateTimeLayout)
 	message = formattedDateTime + " - " + message
 
+	log.Println(message)
+
 	for client := range clients {
 		err := client.WriteMessage(websocket.TextMessage, []byte(message))
 		if err != nil {
