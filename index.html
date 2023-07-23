@@ -6,21 +6,23 @@
 </head>
 <body>
     <h2>Enter Cookies</h2>
-    <label for="agpid_fe">AGPID_FE:</label>
-    <input type="text" id="agpid_fe" name="agpid_fe"><br>
-	<br/>
-    <label for="agpid">AGPID:</label>
-    <input type="text" id="agpid" name="agpid"><br>
-	<br/>
-    <label for="jsessionid">JSESSIONID:</label>
-    <input type="text" id="jsessionid" name="jsessionid"><br>
-	<br/>
-    <input type="button" value="Submit" onclick="sendCookies()">
+    <div>
+        <label for="agpid_fe">AGPID_FE:</label>
+        <input type="text" id="agpid_fe" name="agpid_fe"><br>
+        <br/>
+        <label for="agpid">AGPID:</label>
+        <input type="text" id="agpid" name="agpid"><br>
+        <br/>
+        <label for="jsessionid">JSESSIONID:</label>
+        <input type="text" id="jsessionid" name="jsessionid"><br>
+        <br/>
+        <input type="button" value="Submit" id="submitButton">
+    </div>
     
     <p id="response"></p>
 
     <script>
-        function sendCookies() {
+        document.getElementById("submitButton").addEventListener("click", function() {
             var agpid_fe = encodeURIComponent(document.getElementById("agpid_fe").value);
             var agpid = encodeURIComponent(document.getElementById("agpid").value);
             var jsessionid = encodeURIComponent(document.getElementById("jsessionid").value);
@@ -37,9 +39,11 @@
             .catch(error => {
                 console.error('Error:', error);
             });
-        }
+        });
     </script>
-	<hr/><p>Puoi recuperare questi cookies accedendo al sito del passaporto col tuo spid e poi cliccando tasto destro --> "Ispeziona". Viene aperto un riquadro come quello qui sotto, i cookies richeisti si trovano nella tab "Application".</p>
-	<br/><img src="https://raw.githubusercontent.com/GaussGreen1/Passaporto/main/cookies.jpg" alt="cookies">
+    <hr/>
+    <p>Puoi recuperare questi cookies accedendo al sito del passaporto col tuo spid e poi cliccando tasto destro --> "Ispeziona". Viene aperto un riquadro come quello qui sotto, i cookies richeisti si trovano nella tab "Application".</p>
+    <br/>
+    <img src="https://raw.githubusercontent.com/GaussGreen1/Passaporto/main/cookies.jpg" alt="cookies">
 </body>
 </html>
