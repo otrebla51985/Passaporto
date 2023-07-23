@@ -48,23 +48,39 @@
     <h2>Backend Logs:</h2>
     <div id="log-container"></div>
     <script>
-      // Function to connect to the WebSocket endpoint and display log messages
-      function connectWebSocket() {
-        var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
-        socket.onmessage = function(event) {
-          var logContainer = document.getElementById("log-container");
-          logContainer.innerHTML += event.data + " < br > ";
+        // Function to connect to the WebSocket endpoint and display log messages
+        function connectWebSocket() {
+            var socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var socket = new WebSocket(socketProtocol + "//" + window.location.host + "/ws");
+
+            // Array to store the log lines
+            var logLines = [];
+
+            socket.onmessage = function(event) {
+                var logContainer = document.getElementById("log-container");
+
+                // Add the log message to the array
+                logLines.push(event.data);
+
+                // Show only the last 10 log lines
+                if (logLines.length > 10) {
+                    logLines.shift(); // Remove the first element (oldest log line) from the array
+                }
+
+                // Set the innerHTML of the log container to display the last 10 log lines
+                logContainer.innerHTML = logLines.join("<br>");
+            };
+
+            socket.onclose = function(event) {
+                // Reconnect after 3 seconds when the WebSocket connection is closed
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // Call the connectWebSocket function when the page loads
+        window.onload = function() {
+            connectWebSocket();
         };
-        socket.onclose = function(event) {
-          // Reconnect after 3 seconds when the WebSocket connection is closed
-          setTimeout(connectWebSocket, 3000);
-        };
-      }
-      // Call the connectWebSocket function when the page loads
-      window.onload = function() {
-        connectWebSocket();
-      };
     </script>
   </body>
 </html>
