@@ -212,8 +212,8 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 				sendTelegramNotification(bot, bodyString)
 				pollAPIFlag = false // Stop calling the API until the user presses the submit button again
 
-				// Wait for 20 minutes before resuming the API polling
-				waitTime := 20 * time.Minute
+				// Wait for 8 minutes before resuming the API polling
+				waitTime := 8 * time.Minute
 				time.Sleep(waitTime)
 
 				// Set pollAPIFlag to true after the wait time to resume API polling
