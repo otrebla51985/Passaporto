@@ -232,8 +232,6 @@ func sendErrorResponse(w http.ResponseWriter, message string) {
 }
 
 func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
-	logToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
-
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Panic occurred in sendTelegramNotification:", r)
@@ -282,6 +280,8 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	if daysUntilTargetDate > 160 {
 		logToWebSocket("Ancora niente - prossimo check fra 8 minuti")
 	} else {
+		logToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
+
 		// Write the API response to the file
 		_, err = file.WriteString(bodyString)
 		if err != nil {
