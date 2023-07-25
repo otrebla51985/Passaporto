@@ -270,7 +270,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	today := time.Now().In(time.FixedZone("EST", -5*3600))
 
 	// Convert the target date to a time.Time object
-	targetDate, err := time.Parse("01-02-2006", result)
+	targetDate, err := time.Parse("02-01-2006", result)
 	if err != nil {
 		panic(err)
 	}
