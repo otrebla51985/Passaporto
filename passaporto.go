@@ -267,32 +267,48 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	result := getCharactersAfterSubstring(bodyString, "data=")
 	fmt.Println("Characters after the substring:", result)
 
-	// Write the API response to the file
-	_, err = file.WriteString(bodyString)
+	today := time.Now().In(time.FixedZone("EST", -5*3600))
+
+	// Convert the target date to a time.Time object
+	targetDate, err := time.Parse("01-02-2006", result)
 	if err != nil {
-		log.Println("Error writing to temporary file:", err)
-		return
+		panic(err)
 	}
 
-	// Read the temporary file and get its content
-	data, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Println("Error reading temporary file:", err)
-		return
-	}
+	// Calculate the number of days between the two dates
+	daysUntilTargetDate := targetDate.Sub(today).Hours() / 24
+	fmt.Println("daysUntilTargetDate = ", daysUntilTargetDate)
 
-	// Create a tgbotapi.FileBytes instance with the file content
-	fileBytes := tgbotapi.FileBytes{
-		Name:  fileName,
-		Bytes: data,
-	}
+	if daysUntilTargetDate > 160 {
+		logToWebSocket("Ancora niente - prossimo check fra 8 minuti")
+	} else {
+		// Write the API response to the file
+		_, err = file.WriteString(bodyString)
+		if err != nil {
+			log.Println("Error writing to temporary file:", err)
+			return
+		}
 
-	// Create the Telegram document
-	msg := tgbotapi.NewDocumentUpload(chatID, fileBytes)
-	msg.Caption = "Trovato un posto" + "    \n\ndata = " + result
-	_, err = bot.Send(msg)
-	if err != nil {
-		log.Println("Error sending Telegram document:", err)
+		// Read the temporary file and get its content
+		data, err := os.ReadFile(fileName)
+		if err != nil {
+			log.Println("Error reading temporary file:", err)
+			return
+		}
+
+		// Create a tgbotapi.FileBytes instance with the file content
+		fileBytes := tgbotapi.FileBytes{
+			Name:  fileName,
+			Bytes: data,
+		}
+
+		// Create the Telegram document
+		msg := tgbotapi.NewDocumentUpload(chatID, fileBytes)
+		msg.Caption = "Trovato un posto" + "    \n\ndata = " + result
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Println("Error sending Telegram document:", err)
+		}
 	}
 }
 
