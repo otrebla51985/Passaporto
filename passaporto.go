@@ -241,27 +241,10 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Printf("Bot username: %s", bot.Self.UserName)
 	log.Printf("Bot ID: %d", bot.Self.ID)
 
-	chatID := int64(-1001946027674) //YOUR_TELEGRAM_CHAT_ID
+	chatID := int64(-1001946027674) // YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
 	//gruppo = -974313836
 	//supergruppo = -1001946027674
-
-	//msg := tgbotapi.NewMessage(chatID, "API responded with 'YES'! "+bodyString)
-	//_, err := bot.Send(msg)
-	//if err != nil {
-	//	log.Println("Error sending Telegram notification:", err)
-	//}
-	//os.Exit(3)
-
-	// Create a temporary file to store the API response
-	fileName := "api_response.xml"
-	file, err := os.Create(fileName)
-	if err != nil {
-		log.Println("Error creating temporary file:", err)
-		return
-	}
-	defer os.Remove(fileName)
-	defer file.Close()
 
 	result := getCharactersAfterSubstring(bodyString, "data=")
 	fmt.Println("Characters after the substring:", result)
@@ -283,32 +266,13 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	} else {
 		logToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
-		// Write the API response to the file
-		_, err = file.WriteString(bodyString)
-		if err != nil {
-			log.Println("Error writing to temporary file:", err)
-			return
-		}
+		// Create the Telegram message without the file
+		msg := tgbotapi.NewMessage(chatID, "Trovato un posto"+"    \n\ndata = "+result)
 
-		// Read the temporary file and get its content
-		data, err := os.ReadFile(fileName)
-		if err != nil {
-			log.Println("Error reading temporary file:", err)
-			return
-		}
-
-		// Create a tgbotapi.FileBytes instance with the file content
-		fileBytes := tgbotapi.FileBytes{
-			Name:  fileName,
-			Bytes: data,
-		}
-
-		// Create the Telegram document
-		msg := tgbotapi.NewDocumentUpload(chatID, fileBytes)
-		msg.Caption = "Trovato un posto" + "    \n\ndata = " + result
+		// Send the message
 		_, err = bot.Send(msg)
 		if err != nil {
-			log.Println("Error sending Telegram document:", err)
+			log.Println("Error sending Telegram message:", err)
 		}
 	}
 }
