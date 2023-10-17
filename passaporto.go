@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	pollingTime     = 30 * time.Second
+	pollingTime     = 16 * time.Second
 	triggerEndpoint = "/trigger"
 	renderEndpoint  = "https://passaporto.onrender.com/"
 	method          = "GET"
