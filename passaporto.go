@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	pollingTime     = 16 * time.Second
-	triggerEndpoint = "/trigger"
-	renderEndpoint  = "https://passaporto.onrender.com/"
-	method          = "GET"
+	pollingTime        = 16 * time.Second
+	triggerEndpoint    = "/trigger"
+	passaportoEndpoint = "https://passaportonline.poliziadistato.it/cittadino/a/rc/v1/appuntamento/elenca-sede-prima-disponibilita"
+	method             = "POST"
 )
 
 var bodyString = ""
@@ -34,53 +34,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("WebSocket upgrade error:", err)
-		return
-	}
-	defer conn.Close()
-
-	// Add the client to the clients map
-	clients[conn] = true
-	defer delete(clients, conn)
-
-	for {
-		// Keep the WebSocket connection open to receive log messages
-		_, _, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("WebSocket read error:", err)
-			return
-		}
-	}
-}
-
-func logToWebSocket(message string) {
-	italianTZ, err := time.LoadLocation("Europe/Rome")
-	if err != nil {
-		log.Println("Error loading Italian timezone:", err)
-		return
-	}
-
-	currentTime := time.Now().In(italianTZ)
-
-	dateTimeLayout := "02-01-2006 15:04:05"
-	formattedDateTime := currentTime.Format(dateTimeLayout)
-	message = formattedDateTime + " - " + message
-
-	log.Println(message)
-
-	for client := range clients {
-		err := client.WriteMessage(websocket.TextMessage, []byte(message))
-		if err != nil {
-			log.Println("WebSocket write error:", err)
-			client.Close()
-			delete(clients, client)
-		}
-	}
-}
-
 func main() {
 	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
 	if err != nil {
@@ -92,7 +45,7 @@ func main() {
 	// Start the HTTP server to handle API requests and HTML page
 	http.HandleFunc("/", handleIndexPage)
 	http.HandleFunc(triggerEndpoint, handleTriggerRequest)
-	http.HandleFunc("/ws", handleWebSocket) // WebSocket endpoint
+	http.HandleFunc("/ws", HandleWebSocket) // WebSocket endpoint
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -131,7 +84,7 @@ func handleIndexPage(w http.ResponseWriter, r *http.Request) {
 
 func checkAPI(cookies string) bool {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
+	req, err := http.NewRequest(method, passaportoEndpoint, inputPayload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -168,7 +121,7 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 	for {
 		if pollAPIFlag {
 			client := &http.Client{}
-			req, err := http.NewRequest("GET", "https://www.passaportonline.poliziadistato.it/CittadinoAction.do?codop=resultRicercaRegistiProvincia&provincia=PD", nil)
+			req, err := http.NewRequest("POST", passaportoEndpoint, inputPayload)
 
 			if err != nil {
 				log.Println(err)
@@ -192,15 +145,15 @@ func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 			response := ""
 			if strings.Contains(bodyString, "\"disponibilita\">No</td>") {
 				response = "NO"
-				logToWebSocket("Nessun posto libero")
+				LogToWebSocket("Nessun posto libero")
 			} else if strings.Contains(bodyString, "Accesso Negato") {
 				response = "NO"
-				logToWebSocket("Cookies scaduti, qualcuno lo faccia ripartire pls")
+				LogToWebSocket("Cookies scaduti, qualcuno lo faccia ripartire pls")
 			} else {
 				result := getCharactersAfterSubstring(bodyString, "data=")
 				if !strings.Contains(result, "-") {
 					response = "NO"
-					logToWebSocket("Nessun posto libero")
+					LogToWebSocket("Nessun posto libero")
 				} else {
 					fmt.Println("Forse ho trovato")
 					fmt.Println(bodyString)
@@ -241,7 +194,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Printf("Bot username: %s", bot.Self.UserName)
 	log.Printf("Bot ID: %d", bot.Self.ID)
 
-	chatID := int64(-1001946027674) // YOUR_TELEGRAM_CHAT_ID
+	chatID := int64(112845421) // YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
 	//gruppo = -974313836
 	//supergruppo = -1001946027674
@@ -262,9 +215,9 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	fmt.Println("daysUntilTargetDate = ", daysUntilTargetDate)
 
 	if daysUntilTargetDate > 155 {
-		logToWebSocket("Ancora niente - prossimo check fra 8 minuti")
+		LogToWebSocket("Ancora niente - prossimo check fra 8 minuti")
 	} else {
-		logToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
+		LogToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
 		// Create the Telegram message without the file
 		msg := tgbotapi.NewMessage(chatID, "Trovato un posto"+"    \n\ndata = "+result)
@@ -301,9 +254,7 @@ func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Extract the combined cookies from the URL parameters
 	cookies :=
-		"AGPID_FE=" + r.URL.Query().Get("AGPID_FE") + "; " +
-			"AGPID=" + r.URL.Query().Get("AGPID") + "; " +
-			"JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
+		"JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
 
 	cookies = strings.ReplaceAll(cookies, "%3B", ";")
 	cookies = strings.ReplaceAll(cookies, "%26", "&")
@@ -334,7 +285,7 @@ func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 func keepAlive() {
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest(method, renderEndpoint, nil)
+		req, err := http.NewRequest("GET", "https://passaporto.onrender.com/", nil)
 		if err != nil {
 			log.Println("Error creating request to Render instance:", err)
 			time.Sleep(pollingTime) // Retry after the pollingTime

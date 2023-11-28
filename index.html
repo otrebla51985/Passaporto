@@ -6,14 +6,6 @@
   <body>
     <h2>Enter Cookies</h2>
     <div>
-      <label for="agpid_fe">AGPID_FE:</label>
-      <input type="text" id="agpid_fe" name="agpid_fe">
-      <br>
-      <br />
-      <label for="agpid">AGPID:</label>
-      <input type="text" id="agpid" name="agpid">
-      <br>
-      <br />
       <label for="jsessionid">JSESSIONID:</label>
       <input type="text" id="jsessionid" name="jsessionid">
       <br>
@@ -23,10 +15,8 @@
     <p id="response"></p>
     <script>
       document.getElementById("submitButton").addEventListener("click", function() {
-        var agpid_fe = encodeURIComponent(document.getElementById("agpid_fe").value);
-        var agpid = encodeURIComponent(document.getElementById("agpid").value);
         var jsessionid = encodeURIComponent(document.getElementById("jsessionid").value);
-        var cookies = "AGPID_FE=" + agpid_fe + "&AGPID=" + agpid + "&JSESSIONID=" + jsessionid;
+        var cookies = "&JSESSIONID=" + jsessionid;
         fetch('/trigger?' + cookies).then(response => response.text()).then(data => {
           document.getElementById("response").innerHTML = data;
         }).catch(error => {
