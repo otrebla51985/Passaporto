@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -61,7 +61,7 @@ func LogToWebSocket(message string) {
 }
 
 func CreateInputPayload() {
-	content, err := ioutil.ReadFile("inputPayload.json")
+	content, err := os.ReadFile("payloadInput.json")
 	if err != nil {
 		fmt.Println("Error reading file:", err)
 		return

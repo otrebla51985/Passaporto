@@ -1,0 +1,28 @@
+{
+    "disponibilitaNonResidenti": false,
+    "minorenne": false,
+    "minorenneDodici": false,
+    "comune": {
+        "objectKey": "6324",
+        "persistenceStatus": "PERSISTED",
+        "id": "6324",
+        "istatId": null,
+        "denominazione": "VIGODARZERE",
+        "codice": "6324",
+        "denominazioneEstera": null,
+        "provincia": "PD",
+        "new": false,
+        "deleted": false
+    },
+    "pageInfo": {
+        "maxResults": 5
+    },
+    "sortInfo": {
+        "sortList": [
+            {
+                "sortDirection": 0,
+                "sortProperty": "primaDisponibilitaResidente"
+            }
+        ]
+    }
+}
