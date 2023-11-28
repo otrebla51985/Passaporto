@@ -96,7 +96,6 @@ func PollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 				return
 			}
 			bodyString = string(body)
-			log.Printf("bodyString altro = " + bodyString)
 
 			response := ""
 			if strings.Contains(bodyString, "dataPrimaDisponibilitaResidenti\": null") {
