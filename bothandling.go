@@ -25,7 +25,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	//gruppo = -974313836
 	//supergruppo = -1001946027674
 
-	result := GetCharactersAfterSubstring(bodyString, "data=")
+	result := GetCharactersAfterSubstring(bodyString, "dataPrimaDisponibilitaResidenti\": \"", 10)
 	fmt.Println("Characters after the substring:", result)
 
 	today := time.Now().In(time.FixedZone("EST", -5*3600))
@@ -56,7 +56,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	}
 }
 
-func GetCharactersAfterSubstring(inputString, substring string) string {
+func GetCharactersAfterSubstring(inputString, substring string, amount int) string {
 	index := strings.Index(inputString, substring)
 
 	if index == -1 {
@@ -64,7 +64,7 @@ func GetCharactersAfterSubstring(inputString, substring string) string {
 		return ""
 	}
 
-	endPosition := index + len(substring) + 10
+	endPosition := index + len(substring) + amount
 
 	// Check if the end position is within the bounds of the inputString.
 	if endPosition > len(inputString) {
@@ -85,10 +85,10 @@ func HandleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	cookies = strings.ReplaceAll(cookies, "%3B", ";")
 	cookies = strings.ReplaceAll(cookies, "%26", "&")
 	cookies = strings.ReplaceAll(cookies, " ", "")
-
 	log.Println("cookies = " + cookies)
 
-	if !CheckAPI(cookies) {
+	apiOutput := CheckAPI(cookies, "")
+	if strings.Contains(apiOutput, "_csrf") {
 		SendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
 		return
 	}
@@ -106,27 +106,4 @@ func HandleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	// Respond to the trigger request with a success message
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("API trigger received. Polling has started with the provided cookies."))
-}
-
-func KeepAlive() {
-	for {
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://passaporto.onrender.com/", nil)
-		if err != nil {
-			log.Println("Error creating request to Render instance:", err)
-			time.Sleep(pollingTime) // Retry after the pollingTime
-			continue
-		}
-
-		// Make the API call to the Render instance
-		res, err := client.Do(req)
-		if err != nil {
-			log.Println("Error calling Render instance:", err)
-		} else {
-			defer res.Body.Close()
-			log.Println("API call to Render instance successful")
-		}
-
-		time.Sleep(pollingTime)
-	}
 }

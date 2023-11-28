@@ -5,13 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-var inputPayload = strings.NewReader("")
+var inputPayload = ""
 
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -69,5 +68,28 @@ func CreateInputPayload() {
 
 	// Convert the file content to a string
 	inputPayloadString := string(content)
-	inputPayload = strings.NewReader(inputPayloadString)
+	inputPayload = inputPayloadString
+}
+
+func KeepAlive() {
+	for {
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", "https://passaporto.onrender.com/", nil)
+		if err != nil {
+			log.Println("Error creating request to Render instance:", err)
+			time.Sleep(pollingTime) // Retry after the pollingTime
+			continue
+		}
+
+		// Make the API call to the Render instance
+		res, err := client.Do(req)
+		if err != nil {
+			log.Println("Error calling Render instance:", err)
+		} else {
+			defer res.Body.Close()
+			log.Println("API call to Render instance successful")
+		}
+
+		time.Sleep(pollingTime)
+	}
 }

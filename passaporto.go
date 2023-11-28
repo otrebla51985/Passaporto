@@ -54,6 +54,8 @@ func main() {
 		}
 	}()
 
+	CreateInputPayload()
+
 	go KeepAlive()
 
 	// Block the main goroutine to keep the server running indefinitely
