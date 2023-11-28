@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -29,7 +26,6 @@ var clients = make(map[*websocket.Conn]bool)
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		// Allow all connections from any origin. You may want to restrict this for production use.
 		return true
 	},
 }
@@ -43,8 +39,8 @@ func main() {
 	log.Printf("Connected to Telegram bot: %s", bot.Self.UserName)
 
 	// Start the HTTP server to handle API requests and HTML page
-	http.HandleFunc("/", handleIndexPage)
-	http.HandleFunc(triggerEndpoint, handleTriggerRequest)
+	http.HandleFunc("/", HandleIndexPage)
+	http.HandleFunc(triggerEndpoint, HandleTriggerRequest)
 	http.HandleFunc("/ws", HandleWebSocket) // WebSocket endpoint
 
 	port := os.Getenv("PORT")
@@ -58,7 +54,7 @@ func main() {
 		}
 	}()
 
-	go keepAlive()
+	go KeepAlive()
 
 	// Block the main goroutine to keep the server running indefinitely
 	// and recover from any panics that may occur
@@ -73,234 +69,11 @@ func main() {
 	select {}
 }
 
-func handleIndexPage(w http.ResponseWriter, r *http.Request) {
+func HandleIndexPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 
 	// Serve the index.html file when the root endpoint is accessed
 	http.ServeFile(w, r, "index.html")
-}
-
-func checkAPI(cookies string) bool {
-	client := &http.Client{}
-	req, err := http.NewRequest(method, passaportoEndpoint, inputPayload)
-
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-
-	// Use the stored cookies in the request header
-	req.Header.Add("Cookie", cookies)
-
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	bodyString = string(body)
-
-	// Check if the "Accesso Negato" substring is present in the XML response
-	return !strings.Contains(bodyString, "Accesso Negato")
-}
-
-func pollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
-	if !checkAPI(cookies) {
-		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
-		return
-	}
-
-	for {
-		if pollAPIFlag {
-			client := &http.Client{}
-			req, err := http.NewRequest("POST", passaportoEndpoint, inputPayload)
-
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			req.Header.Add("Cookie", cookies)
-			res, err := client.Do(req)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			defer res.Body.Close()
-
-			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			bodyString = string(body)
-
-			response := ""
-			if strings.Contains(bodyString, "\"disponibilita\">No</td>") {
-				response = "NO"
-				LogToWebSocket("Nessun posto libero")
-			} else if strings.Contains(bodyString, "Accesso Negato") {
-				response = "NO"
-				LogToWebSocket("Cookies scaduti, qualcuno lo faccia ripartire pls")
-			} else {
-				result := getCharactersAfterSubstring(bodyString, "data=")
-				if !strings.Contains(result, "-") {
-					response = "NO"
-					LogToWebSocket("Nessun posto libero")
-				} else {
-					fmt.Println("Forse ho trovato")
-					fmt.Println(bodyString)
-					response = "YES"
-				}
-			}
-
-			if response == "YES" {
-				sendTelegramNotification(bot, bodyString)
-				pollAPIFlag = false // Stop calling the API until the user presses the submit button again
-
-				// Wait for 8 minutes before resuming the API polling
-				waitTime := 8 * time.Minute
-				time.Sleep(waitTime)
-
-				// Set pollAPIFlag to true after the wait time to resume API polling
-				pollAPIFlag = true
-			}
-		}
-
-		time.Sleep(pollingTime)
-	}
-}
-
-func sendErrorResponse(w http.ResponseWriter, message string) {
-	// Send an error message back to the frontend
-	errorMsg = message
-	http.Error(w, message, http.StatusBadRequest)
-}
-
-func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Panic occurred in sendTelegramNotification:", r)
-		}
-	}()
-
-	log.Printf("Bot username: %s", bot.Self.UserName)
-	log.Printf("Bot ID: %d", bot.Self.ID)
-
-	chatID := int64(112845421) // YOUR_TELEGRAM_CHAT_ID
-	//mio = 112845421
-	//gruppo = -974313836
-	//supergruppo = -1001946027674
-
-	result := getCharactersAfterSubstring(bodyString, "data=")
-	fmt.Println("Characters after the substring:", result)
-
-	today := time.Now().In(time.FixedZone("EST", -5*3600))
-
-	// Convert the target date to a time.Time object
-	targetDate, err := time.Parse("02-01-2006", result)
-	if err != nil {
-		panic(err)
-	}
-
-	// Calculate the number of days between the two dates
-	daysUntilTargetDate := targetDate.Sub(today).Hours() / 24
-	fmt.Println("daysUntilTargetDate = ", daysUntilTargetDate)
-
-	if daysUntilTargetDate > 155 {
-		LogToWebSocket("Ancora niente - prossimo check fra 8 minuti")
-	} else {
-		LogToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
-
-		// Create the Telegram message without the file
-		msg := tgbotapi.NewMessage(chatID, "Trovato un posto"+"    \n\ndata = "+result)
-
-		// Send the message
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Println("Error sending Telegram message:", err)
-		}
-	}
-}
-
-func getCharactersAfterSubstring(inputString, substring string) string {
-	index := strings.Index(inputString, substring)
-
-	if index == -1 {
-		// Substring not found, return an empty string or handle the error accordingly.
-		return ""
-	}
-
-	endPosition := index + len(substring) + 10
-
-	// Check if the end position is within the bounds of the inputString.
-	if endPosition > len(inputString) {
-		endPosition = len(inputString)
-	}
-
-	// Extract the characters after the substring up to the 10th character.
-	return inputString[index+len(substring) : endPosition]
-}
-
-func handleTriggerRequest(w http.ResponseWriter, r *http.Request) {
-	log.Println("Received trigger request - polling API and sending Telegram notification")
-
-	// Extract the combined cookies from the URL parameters
-	cookies :=
-		"JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
-
-	cookies = strings.ReplaceAll(cookies, "%3B", ";")
-	cookies = strings.ReplaceAll(cookies, "%26", "&")
-	cookies = strings.ReplaceAll(cookies, " ", "")
-
-	log.Println("cookies = " + cookies)
-
-	if !checkAPI(cookies) {
-		sendErrorResponse(w, "Error: Invalid or expired cookies. Please try again with valid cookies.")
-		return
-	}
-
-	bot, err := tgbotapi.NewBotAPI("5878994522:AAGAgNPCncWJxgMou5q0x6UOgkyUuD_99VA")
-	if err != nil {
-		log.Println("Error initializing Telegram bot:", err)
-		sendErrorResponse(w, "Error initializing Telegram bot. Please check the provided API token.")
-		return
-	}
-
-	pollAPIFlag = true
-	go pollAPI(w, bot, cookies) // Start the API polling in a separate goroutine
-
-	// Respond to the trigger request with a success message
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("API trigger received. Polling has started with the provided cookies."))
-}
-
-func keepAlive() {
-	for {
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://passaporto.onrender.com/", nil)
-		if err != nil {
-			log.Println("Error creating request to Render instance:", err)
-			time.Sleep(pollingTime) // Retry after the pollingTime
-			continue
-		}
-
-		// Make the API call to the Render instance
-		res, err := client.Do(req)
-		if err != nil {
-			log.Println("Error calling Render instance:", err)
-		} else {
-			defer res.Body.Close()
-			log.Println("API call to Render instance successful")
-		}
-
-		time.Sleep(pollingTime)
-	}
 }
