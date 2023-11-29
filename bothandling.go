@@ -45,8 +45,11 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	} else {
 		LogToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 
-		// Create the Telegram message without the file
-		msg := tgbotapi.NewMessage(chatID, "Trovato un posto"+"    \n\ndata = "+result)
+		//change the date format before sending the message:
+		formattedResult := targetDate.Format("02-01-2006")
+
+		// Create the Telegram message
+		msg := tgbotapi.NewMessage(chatID, "Trovato un posto"+"    \n\ndata = "+formattedResult)
 
 		// Send the message
 		_, err = bot.Send(msg)
@@ -79,8 +82,7 @@ func HandleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received trigger request - polling API and sending Telegram notification")
 
 	// Extract the combined cookies from the URL parameters
-	cookies :=
-		"JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
+	cookies := "JSESSIONID=" + r.URL.Query().Get("JSESSIONID")
 
 	cookies = strings.ReplaceAll(cookies, "%3B", ";")
 	cookies = strings.ReplaceAll(cookies, "%26", "&")
