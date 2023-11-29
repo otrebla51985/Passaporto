@@ -41,7 +41,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Println("daysUntilTargetDate = ", daysUntilTargetDate)
 
 	if daysUntilTargetDate > 155 {
-		LogToWebSocket("Ancora niente - prossimo check fra 8 minuti")
+		LogToWebSocket("Ancora niente - prossimo check fra 3 minuti")
 	} else {
 		LogToWebSocket("TROVATO UN POSTO - INVIO MESSAGGIO SU TELEGRAM")
 

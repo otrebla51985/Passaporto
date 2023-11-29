@@ -87,7 +87,7 @@ func KeepAlive() {
 			log.Println("Error calling Render instance:", err)
 		} else {
 			defer res.Body.Close()
-			log.Println("API call to Render instance successful")
+			//log.Println("API call to Render instance successful")
 		}
 
 		time.Sleep(pollingTime)
