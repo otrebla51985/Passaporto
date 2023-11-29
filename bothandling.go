@@ -20,7 +20,7 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	log.Printf("Bot username: %s", bot.Self.UserName)
 	log.Printf("Bot ID: %d", bot.Self.ID)
 
-	chatID := int64(112845421) // YOUR_TELEGRAM_CHAT_ID
+	chatID := int64(-1001946027674) // YOUR_TELEGRAM_CHAT_ID
 	//mio = 112845421
 	//gruppo = -974313836
 	//supergruppo = -1001946027674
