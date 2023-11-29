@@ -110,7 +110,7 @@ func PollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 					response = "NO"
 					LogToWebSocket("Nessun posto libero")
 				} else {
-					fmt.Println("Forse ho trovato")
+					fmt.Println("Trovato un posto")
 					fmt.Println(bodyString)
 					response = "YES"
 				}

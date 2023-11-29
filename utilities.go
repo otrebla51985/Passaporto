@@ -52,9 +52,9 @@ func LogToWebSocket(message string) {
 	for client := range clients {
 		err := client.WriteMessage(websocket.TextMessage, []byte(message))
 		if err != nil {
-			log.Println("WebSocket write error:", err)
-			client.Close()
-			delete(clients, client)
+			log.Printf("WebSocket write error:", err)
+			//client.Close()
+			//delete(clients, client)
 		}
 	}
 }
