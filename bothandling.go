@@ -25,20 +25,20 @@ func sendTelegramNotification(bot *tgbotapi.BotAPI, bodyString string) {
 	//gruppo = -974313836
 	//supergruppo = -1001946027674
 
-	result := GetCharactersAfterSubstring(bodyString, "dataPrimaDisponibilitaResidenti\": \"", 10)
+	result := GetCharactersAfterSubstring(bodyString, "dataPrimaDisponibilitaResidenti\":\"", 10)
 	fmt.Println("Characters after the substring:", result)
 
 	today := time.Now().In(time.FixedZone("EST", -5*3600))
 
 	// Convert the target date to a time.Time object
-	targetDate, err := time.Parse("02-01-2006", result)
+	targetDate, err := time.Parse("2006-01-02", result)
 	if err != nil {
 		panic(err)
 	}
 
 	// Calculate the number of days between the two dates
 	daysUntilTargetDate := targetDate.Sub(today).Hours() / 24
-	fmt.Println("daysUntilTargetDate = ", daysUntilTargetDate)
+	log.Println("daysUntilTargetDate = ", daysUntilTargetDate)
 
 	if daysUntilTargetDate > 155 {
 		LogToWebSocket("Ancora niente - prossimo check fra 8 minuti")
@@ -85,6 +85,8 @@ func HandleTriggerRequest(w http.ResponseWriter, r *http.Request) {
 	cookies = strings.ReplaceAll(cookies, "%3B", ";")
 	cookies = strings.ReplaceAll(cookies, "%26", "&")
 	cookies = strings.ReplaceAll(cookies, " ", "")
+	cookies = strings.ReplaceAll(cookies, "\"", "")
+
 	log.Println("cookies = " + cookies)
 
 	apiOutput := CheckAPI(cookies, "")

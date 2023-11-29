@@ -98,15 +98,15 @@ func PollAPI(w http.ResponseWriter, bot *tgbotapi.BotAPI, cookies string) {
 			bodyString = string(body)
 
 			response := ""
-			if strings.Contains(bodyString, "dataPrimaDisponibilitaResidenti\": null") {
+			if strings.Contains(bodyString, "dataPrimaDisponibilitaResidenti\":null") {
 				response = "NO"
 				LogToWebSocket("Nessun posto libero")
 			} else if strings.Contains(bodyString, "_csrf") {
 				response = "NO"
 				LogToWebSocket("Cookies scaduti, qualcuno lo faccia ripartire pls")
 			} else {
-				result := GetCharactersAfterSubstring(bodyString, "dataPrimaDisponibilitaResidenti\": \"", 10)
-				if !strings.Contains(result, "null") {
+				result := GetCharactersAfterSubstring(bodyString, "dataPrimaDisponibilitaResidenti\":\"", 10)
+				if strings.Contains(result, "null") {
 					response = "NO"
 					LogToWebSocket("Nessun posto libero")
 				} else {
