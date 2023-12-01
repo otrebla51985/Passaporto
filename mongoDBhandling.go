@@ -31,7 +31,6 @@ func LogToDatabase(message string) {
 
 	_, err = collection.InsertOne(context.Background(), bson.D{
 		{"timestamp", time.Now()},
-		{"level", "INFO"},
 		{"message", message},
 	})
 	if err != nil {
