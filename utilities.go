@@ -57,6 +57,8 @@ func LogToWebSocket(message string) {
 			//delete(clients, client)
 		}
 	}
+
+	LogToDatabase(message)
 }
 
 func CreateInputPayload() {
