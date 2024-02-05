@@ -9,3 +9,6 @@ This Go code checks for appointments available to people living in Padova, and u
 Getting on the website as soon as you receive the notification you're almost guaranteed to land an appointment.   
 
 The code runs 24/7 on the free plan of render.com.
+
+
+05/02/2024 is not working
